@@ -224,8 +224,7 @@
   .about-text strong { color: var(--purple-bright); font-weight: 500; }
 
   /* projects grid */
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
-  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
   .card {
     background: var(--black-soft);
     border: 1px solid var(--line);
@@ -237,6 +236,19 @@
     overflow: hidden;
     transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), border-color 0.4s;
   }
+  .card-preview {
+    margin-top: 28px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(139,61,245,0.2);
+  }
+  .card-preview img {
+    width: 100%;
+    display: block;
+    opacity: 0.85;
+    transition: opacity 0.3s;
+  }
+  .card:hover .card-preview img { opacity: 1; }
   .card::before {
     content: "";
     position: absolute;
@@ -375,6 +387,9 @@
   <h3>Network.me</h3>
   <p>A LinkedIn network visualizer that turns your connections export into an interactive, searchable graph — clustered by company with click-through profiles, running entirely in your browser. No account or backend required.</p>
   <div class="tags"><span class="tag">JavaScript</span><span class="tag">Data Viz</span><span class="tag">Web</span></div>
+  <div class="card-preview">
+    <img src="images/networkme-preview.png" alt="Network.me graph visualization" loading="lazy">
+  </div>
 </a>
       <div class="card reveal">
         <div class="num">002</div>
