@@ -10,9 +10,15 @@ Usage:
 
 Edit FULLSTACK-PLAYBOOK.md (and re-export FULLSTACK-PLAYBOOK.docx for the
 download button), then re-run this to refresh the reading page.
+
+The page also has a "Copy LLM prompt" button. The copied text = a hands-on
+guide preamble + the playbook with repo/workplace-specific blockquote
+callouts stripped (so it's project-agnostic). It is embedded base64-encoded
+so copy works offline. The on-page reading version keeps every callout.
 """
 import os
 import re
+import base64
 import markdown
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -49,10 +55,60 @@ def fix_nested_list_indent(text):
     return "\n".join(out)
 
 
-with open(SRC, encoding="utf-8") as f:
-    md_text = f.read()
+def strip_repo_callouts(text):
+    """Remove blockquote callouts that reference the author's specific repo
+    or workplace, so the copied LLM prompt is project-agnostic. General
+    teaching blockquotes (e.g. "How to read this", "jsdom gotchas") are kept.
+    The on-page reading version is rendered separately and keeps everything."""
+    markers = ("in this repo", "reference repo", "city furniture")
+    lines = text.split("\n")
+    out, i, in_fence = [], 0, False
+    while i < len(lines):
+        ln = lines[i]
+        if ln.lstrip().startswith("```"):
+            in_fence = not in_fence
+            out.append(ln)
+            i += 1
+            continue
+        if not in_fence and ln.startswith(">"):
+            block, j = [], i
+            while j < len(lines) and lines[j].startswith(">"):
+                block.append(lines[j])
+                j += 1
+            blocktext = " ".join(re.sub(r"^>\s?", "", b) for b in block).lower()
+            if any(m in blocktext for m in markers):
+                if j < len(lines) and lines[j].strip() == "":
+                    j += 1  # also drop one trailing blank line
+                i = j
+                continue
+            out.extend(block)
+            i = j
+            continue
+        out.append(ln)
+        i += 1
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out))
 
-md_text = fix_nested_list_indent(md_text)
+
+def scrub_repo_prose(text):
+    """Remove the few non-blockquote sentences that name the author's
+    reference app, so the copied prompt references no specific project."""
+    patterns = [
+        # intro paragraph's reference-implementation sentence
+        r"\s+Where it helps to be concrete, it references.*?theory maps to practice\.",
+        # §9.2 parenthetical aside
+        r"\s*\*This is what\s+the reference repo uses\.\*",
+        # closing line's callout clause
+        r"; the \"In this repo\" callouts map.*?practice side by side",
+    ]
+    for pat in patterns:
+        text = re.sub(pat, "", text, flags=re.DOTALL)
+    return text
+
+
+with open(SRC, encoding="utf-8") as f:
+    raw_md = f.read()
+
+md_text = fix_nested_list_indent(raw_md)
 
 body = markdown.markdown(
     md_text,
@@ -60,6 +116,23 @@ body = markdown.markdown(
     extension_configs={"toc": {"slugify": github_slugify}},
     output_format="html5",
 )
+
+# --- Build the copy-paste LLM prompt (hands-on-guide framing) -------------
+PROMPT_HEAD = (
+    "You are an expert full-stack web developer acting as my hands-on "
+    "pair-programming guide. I want to build, test, and ship a modern "
+    "full-stack web app by following the playbook below.\n\n"
+    "Your job: help me apply this playbook to MY project.\n"
+    "1. First, ask me about what I'm building, my experience level, and my goals.\n"
+    "2. Then guide me step by step — recommend decisions, write and explain "
+    "code, and keep me on the Red→Green→Refactor TDD workflow the playbook describes.\n"
+    "3. Cite the playbook's sections as we go, and adapt its choices to my needs.\n\n"
+    "Here is the playbook:\n\n---\n\n"
+)
+PROMPT_TAIL = "\n\n---\n\nStart by asking me about my project.\n"
+
+prompt_text = PROMPT_HEAD + scrub_repo_prose(strip_repo_callouts(raw_md)).strip() + PROMPT_TAIL
+prompt_b64 = base64.b64encode(prompt_text.encode("utf-8")).decode("ascii")
 
 TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en">
@@ -108,7 +181,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   /* sticky top bar */
   .doc-top {
     position: sticky; top: 0; z-index: 50;
-    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; row-gap: 10px;
     padding: 18px clamp(20px, 6vw, 64px);
     backdrop-filter: blur(10px);
     background: linear-gradient(to bottom, rgba(8,7,10,0.92), rgba(8,7,10,0.72));
@@ -122,14 +195,20 @@ TEMPLATE = r"""<!DOCTYPE html>
   }
   .doc-top .back span { color: var(--purple-bright); }
   .doc-top .back:hover { color: var(--purple-bright); }
+  .actions { display: flex; align-items: center; gap: 10px; margin-left: auto; flex-wrap: wrap; }
   .btn {
     display: inline-flex; align-items: center; gap: 9px;
     background: var(--purple); color: #fff; text-decoration: none; font-weight: 500;
     padding: 11px 22px; border-radius: 100px; font-size: 0.9rem;
-    transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s, background 0.3s, color 0.3s;
     box-shadow: 0 8px 30px rgba(139,61,245,0.3); white-space: nowrap;
   }
   .btn:hover { transform: translateY(-2px); background: var(--purple-bright); box-shadow: 0 12px 40px rgba(139,61,245,0.5); }
+  button.btn { border: none; cursor: pointer; font-family: inherit; }
+  .btn-secondary { background: transparent; color: var(--purple-bright); border: 1px solid var(--line); box-shadow: none; }
+  .btn-secondary:hover { background: rgba(139,61,245,0.14); color: #fff; box-shadow: none; }
+  .btn-copy.copied { background: #2ea36b; box-shadow: 0 8px 30px rgba(46,163,107,0.4); }
+  .btn-copy.copied:hover { background: #2ea36b; transform: none; }
 
   /* document column */
   .doc {
@@ -218,7 +297,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     .doc pre code, .doc table { font-size: 0.78rem; }
     .doc-top { padding-left: 16px; padding-right: 16px; }
     .doc-top .back { font-size: 0.92rem; }
-    .doc-top .btn { padding: 10px 18px; font-size: 0.85rem; }
+    .doc-top .btn { padding: 10px 16px; font-size: 0.85rem; }
   }
 </style>
 </head>
@@ -229,10 +308,16 @@ TEMPLATE = r"""<!DOCTYPE html>
 
 <header class="doc-top">
   <a class="back" href="../index.html"><span>&larr;</span> Chase Sweers</a>
-  <a class="btn" href="FULLSTACK-PLAYBOOK.docx" download>
-    Download .docx
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-  </a>
+  <div class="actions">
+    <button class="btn btn-copy" id="copyPrompt" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      <span class="label">Copy LLM prompt</span>
+    </button>
+    <a class="btn btn-secondary" href="FULLSTACK-PLAYBOOK.docx" download>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+      <span class="label">Download .docx</span>
+    </a>
+  </div>
 </header>
 
 <main class="doc">
@@ -243,6 +328,57 @@ __BODY__
   &copy; 2026 Chase Sweers &middot; Full-Stack Web App Playbook
 </footer>
 
+<script type="text/plain" id="llm-prompt-b64">__PROMPT_B64__</script>
+<script>
+(function () {
+  var btn = document.getElementById('copyPrompt');
+  if (!btn) return;
+  var labelEl = btn.querySelector('.label');
+  var original = labelEl.textContent;
+  var resetTimer;
+  function decodePrompt() {
+    var b64 = document.getElementById('llm-prompt-b64').textContent.trim();
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+  function flash(msg, ok) {
+    labelEl.textContent = msg;
+    btn.classList.toggle('copied', !!ok);
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(function () {
+      labelEl.textContent = original;
+      btn.classList.remove('copied');
+    }, 2200);
+  }
+  btn.addEventListener('click', async function () {
+    var text = decodePrompt();
+    var ok = false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch (e) { ok = false; }
+    if (!ok) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+    }
+    flash(ok ? 'Copied!' : 'Press Ctrl/Cmd+C', ok);
+  });
+})();
+</script>
+
 </body>
 </html>
 """
@@ -252,9 +388,13 @@ html = TEMPLATE.replace("__BODY__", body)
 # Make wide GFM tables horizontally scrollable on narrow screens.
 html = html.replace("<table>", '<div class="table-scroll"><table>').replace("</table>", "</table></div>")
 
+# Embed the copy-paste prompt (base64, so copy works offline with no escaping issues).
+html = html.replace("__PROMPT_B64__", prompt_b64)
+
 with open(OUT, "w", encoding="utf-8") as f:
     f.write(html)
 
 print("wrote", OUT)
 print("headings with ids:", len(re.findall(r"<h[1-6] id=", html)),
       "| tables:", html.count("<table>"), "| code blocks:", html.count("<pre>"))
+print("prompt chars:", len(prompt_text), "| base64 chars:", len(prompt_b64))
