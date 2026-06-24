@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Modern Full-Stack Web App Playbook — Chase Sweers</title>
+<meta name="description" content="A practical, tool-by-tool guide to building, testing, and shipping a typed, test-driven full-stack web application.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --black: #08070a;
+    --black-soft: #100d16;
+    --purple: #8b3df5;
+    --purple-bright: #b07cff;
+    --purple-deep: #4a1d8a;
+    --text: #ece9f1;
+    --text-dim: #9a93ab;
+    --line: rgba(139, 61, 245, 0.18);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* atmospheric background (matches home) */
+  .glow { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.5; z-index: 0; pointer-events: none; }
+  .glow-1 { width: 600px; height: 600px; background: var(--purple-deep); top: -240px; left: -180px; }
+  .glow-2 { width: 460px; height: 460px; background: var(--purple); bottom: -160px; right: -120px; opacity: 0.22; }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* sticky top bar */
+  .doc-top {
+    position: sticky; top: 0; z-index: 50;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    padding: 18px clamp(20px, 6vw, 64px);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(to bottom, rgba(8,7,10,0.92), rgba(8,7,10,0.72));
+    border-bottom: 1px solid var(--line);
+  }
+  .doc-top .back {
+    font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem;
+    color: var(--text); text-decoration: none; letter-spacing: -0.01em;
+    display: inline-flex; align-items: center; gap: 9px; transition: color 0.3s;
+    white-space: nowrap;
+  }
+  .doc-top .back span { color: var(--purple-bright); }
+  .doc-top .back:hover { color: var(--purple-bright); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    background: var(--purple); color: #fff; text-decoration: none; font-weight: 500;
+    padding: 11px 22px; border-radius: 100px; font-size: 0.9rem;
+    transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+    box-shadow: 0 8px 30px rgba(139,61,245,0.3); white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-2px); background: var(--purple-bright); box-shadow: 0 12px 40px rgba(139,61,245,0.5); }
+
+  /* document column */
+  .doc {
+    position: relative; z-index: 2;
+    max-width: 860px; margin: 0 auto;
+    padding: clamp(40px, 7vw, 80px) clamp(20px, 6vw, 40px) 120px;
+    color: #c7c1d4; font-size: 1.02rem;
+  }
+  .doc > *:first-child { margin-top: 0; }
+
+  .doc h1, .doc h2, .doc h3, .doc h4 {
+    font-family: 'Syne', sans-serif; color: var(--text);
+    line-height: 1.15; letter-spacing: -0.02em; scroll-margin-top: 84px;
+  }
+  .doc h1 {
+    font-weight: 800; font-size: clamp(2.1rem, 5.5vw, 3.4rem); margin: 0 0 18px;
+    background: linear-gradient(110deg, var(--purple-bright), var(--purple) 55%, #d9c4ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .doc h2 {
+    font-weight: 700; font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+    margin: 72px 0 22px; padding-top: 30px; border-top: 1px solid var(--line);
+  }
+  .doc h3 { font-weight: 600; font-size: 1.3rem; margin: 44px 0 14px; color: #efeaf6; }
+  .doc h4 { font-weight: 600; font-size: 1.05rem; margin: 32px 0 12px; color: var(--purple-bright); }
+
+  .doc p { margin: 0 0 18px; line-height: 1.75; }
+  .doc a { color: var(--purple-bright); text-decoration: none; border-bottom: 1px solid rgba(176,124,255,0.3); transition: border-color 0.25s, color 0.25s; }
+  .doc a:hover { color: #d9c4ff; border-color: var(--purple-bright); }
+  .doc strong { color: var(--purple-bright); font-weight: 500; }
+  .doc em { color: #d6d0e2; }
+
+  .doc ul, .doc ol { margin: 0 0 18px; padding-left: 1.5em; line-height: 1.7; }
+  .doc li { margin-bottom: 8px; }
+  .doc li::marker { color: var(--purple); }
+  .doc ul ul, .doc ol ul, .doc ul ol, .doc ol ol { margin: 8px 0 4px; }
+
+  /* inline code */
+  .doc code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85em;
+    background: rgba(139,61,245,0.14); color: #d9c4ff;
+    padding: 2px 6px; border-radius: 6px; border: 1px solid rgba(139,61,245,0.18);
+  }
+  /* code blocks */
+  .doc pre {
+    background: var(--black-soft); border: 1px solid var(--line); border-radius: 14px;
+    padding: 20px 22px; overflow-x: auto; margin: 0 0 24px; line-height: 1.55;
+  }
+  .doc pre code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+    background: none; border: none; padding: 0; color: #d8d3e3; white-space: pre;
+  }
+
+  /* tables */
+  .doc .table-scroll { overflow-x: auto; margin: 0 0 26px; border: 1px solid var(--line); border-radius: 14px; }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+  .doc th, .doc td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .doc thead th { background: rgba(139,61,245,0.12); color: var(--text); font-family: 'Outfit', sans-serif; font-weight: 500; letter-spacing: 0.01em; }
+  .doc tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+  .doc tbody tr:last-child td { border-bottom: none; }
+  .doc td code, .doc th code { white-space: nowrap; }
+
+  /* blockquotes ("In this repo" / notes) */
+  .doc blockquote {
+    margin: 0 0 24px; padding: 18px 22px;
+    background: linear-gradient(135deg, var(--black-soft), rgba(74,29,138,0.12));
+    border: 1px solid var(--line); border-left: 3px solid var(--purple);
+    border-radius: 12px; color: var(--text-dim);
+  }
+  .doc blockquote p { margin: 0 0 10px; }
+  .doc blockquote p:last-child { margin-bottom: 0; }
+  .doc blockquote strong { color: var(--purple-bright); }
+  .doc blockquote code { background: rgba(139,61,245,0.1); }
+
+  .doc hr { border: none; height: 1px; background: var(--line); margin: 56px 0; }
+
+  footer {
+    position: relative; z-index: 2; text-align: center;
+    padding: 36px 8vw; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace; font-size: 0.76rem;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 600px) {
+    .doc { font-size: 0.98rem; }
+    .doc pre code, .doc table { font-size: 0.78rem; }
+    .doc-top { padding-left: 16px; padding-right: 16px; }
+    .doc-top .back { font-size: 0.92rem; }
+    .doc-top .btn { padding: 10px 18px; font-size: 0.85rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<header class="doc-top">
+  <a class="back" href="../index.html"><span>&larr;</span> Chase Sweers</a>
+  <a class="btn" href="FULLSTACK-PLAYBOOK.docx" download>
+    Download .docx
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+  </a>
+</header>
+
+<main class="doc">
+<h1 id="the-modern-full-stack-web-app-playbook">The Modern Full-Stack Web App Playbook</h1>
+<p><em>A practical, tool-by-tool guide to building, testing, and shipping a typed, test-driven web application.</em></p>
+<p>This document captures an entire real-world workflow — from an empty folder to a tested, CI-validated full-stack
+app — and explains <strong>each tool, why it's used, and exactly how to wire it up</strong>. It is written to be <strong>general</strong>:
+you can follow it for almost any project. Where it helps to be concrete, it references a reference implementation
+(a Next.js app called <em>NetworkMe2</em>) inside <strong>"In this repo"</strong> callouts so you can see how a theory maps to practice.</p>
+<blockquote>
+<p><strong>How to read this</strong>
+Each major section is self-contained: a short <em>what &amp; why</em>, the <em>exact setup commands</em>, a <em>representative code
+snippet</em>, and (where relevant) an <em>"In this repo"</em> note showing one real-world choice. Read top to bottom to
+recreate the whole stack, or jump to the layer you need.</p>
+</blockquote>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#1-philosophy">Philosophy</a></li>
+<li><a href="#2-tech-stack-at-a-glance">Tech Stack at a Glance</a></li>
+<li><a href="#3-prerequisites--environment-nodejs">Prerequisites &amp; Environment (Node.js)</a></li>
+<li><a href="#4-project-scaffolding">Project Scaffolding</a></li>
+<li><a href="#5-version-control--git--github">Version Control — Git &amp; GitHub</a></li>
+<li><a href="#6-frontend">Frontend</a><ul>
+<li>6.1 <a href="#61-routing--structure-nextjs-app-router">Routing &amp; structure (Next.js App Router)</a></li>
+<li>6.2 <a href="#62-react-fundamentals">React fundamentals</a></li>
+<li>6.3 <a href="#63-styling-tailwind-css-v4">Styling (Tailwind CSS v4)</a></li>
+<li>6.4 <a href="#64-state-management-redux-toolkit">State management (Redux Toolkit)</a></li>
+<li>6.5 <a href="#65-forms-react-hook-form--zod">Forms (React Hook Form + Zod)</a></li>
+</ul>
+</li>
+<li><a href="#7-backend">Backend</a><ul>
+<li>7.1 <a href="#71-api-route-handlers">API route handlers</a></li>
+<li>7.2 <a href="#72-database-sqlite-via-better-sqlite3">Database (SQLite via better-sqlite3)</a></li>
+<li>7.3 <a href="#73-authentication-jwt--bcrypt">Authentication (JWT + bcrypt)</a></li>
+<li>7.4 <a href="#74-route-protection-middleware">Route protection (middleware)</a></li>
+<li>7.5 <a href="#75-input-validation-rate-limiting--transactional-email">Input validation, rate limiting, email</a></li>
+<li>7.6 <a href="#76-security-headers">Security headers</a></li>
+</ul>
+</li>
+<li><a href="#8-docker">Docker</a></li>
+<li><a href="#9-testing--the-tdd-workflow">Testing — the TDD Workflow</a><ul>
+<li>9.1 <a href="#91-unit-testing-vitest">Unit testing (Vitest)</a></li>
+<li>9.2 <a href="#92-integration-testing-vitest--react-testing-library--msw">Integration testing (Vitest + RTL + MSW)</a></li>
+<li>9.3 <a href="#93-end-to-end-testing-playwright">End-to-end testing (Playwright)</a></li>
+</ul>
+</li>
+<li><a href="#10-cicd--github-actions">CI/CD — GitHub Actions</a></li>
+<li><a href="#11-architecture-decision-records-adrs">Architecture Decision Records (ADRs)</a></li>
+<li><a href="#12-recreation-checklist">Recreation Checklist</a></li>
+<li><a href="#13-appendix--dependencies--command-cheat-sheet">Appendix — Dependencies &amp; Command Cheat-Sheet</a></li>
+</ol>
+<hr>
+<h2 id="1-philosophy">1. Philosophy</h2>
+<p>Two ideas anchor this entire stack:</p>
+<ol>
+<li>
+<p><strong>Everything is typed, end to end.</strong> TypeScript runs from the database row, through the API, into the Redux
+   store, and out to the React component. Runtime validation (Zod) guards the boundaries where untyped data
+   enters (HTTP request bodies, form input). The compiler catches the rest.</p>
+</li>
+<li>
+<p><strong>Tests come first (TDD).</strong> No feature is written before a failing test describes it. The cycle is always
+   <strong>Red → Green → Refactor</strong>: write a test that fails, write the minimum code to make it pass, then clean up
+   while the test holds you safe. This keeps a fast-moving codebase from rotting.</p>
+</li>
+</ol>
+<p>A useful mental model of the test pyramid used here:</p>
+<pre><code>        /\        E2E (Playwright)        — few, slow, high-confidence: real browser, real server
+       /  \
+      /----\      Integration (Vitest+RTL) — many: a component + its store + mocked network
+     /      \
+    /--------\    Unit (Vitest)            — most: pure functions &amp; state logic, no DOM/network
+</code></pre>
+<hr>
+<h2 id="2-tech-stack-at-a-glance">2. Tech Stack at a Glance</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Tool</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Runtime</strong></td>
+<td>Node.js 22</td>
+<td>JavaScript runtime for dev server, build, and tests</td>
+</tr>
+<tr>
+<td><strong>Language</strong></td>
+<td>TypeScript 5</td>
+<td>Static typing across the whole codebase</td>
+</tr>
+<tr>
+<td><strong>Framework</strong></td>
+<td>Next.js 16 (App Router)</td>
+<td>Full-stack React framework: routing, SSR, API routes, bundling</td>
+</tr>
+<tr>
+<td><strong>UI library</strong></td>
+<td>React 19</td>
+<td>Component model and rendering</td>
+</tr>
+<tr>
+<td><strong>Styling</strong></td>
+<td>Tailwind CSS v4</td>
+<td>Utility-first CSS, dark mode, no separate stylesheet sprawl</td>
+</tr>
+<tr>
+<td><strong>Client state</strong></td>
+<td>Redux Toolkit + React-Redux</td>
+<td>Predictable global state, memoized selectors</td>
+</tr>
+<tr>
+<td><strong>Forms</strong></td>
+<td>React Hook Form + Zod</td>
+<td>Performant forms with schema-based validation</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>SQLite (<code>better-sqlite3</code>)</td>
+<td>Embedded, zero-config relational store (swappable for Postgres)</td>
+</tr>
+<tr>
+<td><strong>Auth</strong></td>
+<td><code>bcryptjs</code> + <code>jsonwebtoken</code> / <code>jose</code></td>
+<td>Password hashing + stateless JWT sessions</td>
+</tr>
+<tr>
+<td><strong>Email</strong></td>
+<td>Resend</td>
+<td>Transactional email (e.g. password-reset links)</td>
+</tr>
+<tr>
+<td><strong>Unit/Integration tests</strong></td>
+<td>Vitest + jsdom + React Testing Library</td>
+<td>Fast tests for logic and components</td>
+</tr>
+<tr>
+<td><strong>Network mocking</strong></td>
+<td>MSW <em>(or <code>vi.spyOn(fetch)</code>)</em></td>
+<td>Intercept HTTP in tests</td>
+</tr>
+<tr>
+<td><strong>E2E tests</strong></td>
+<td>Playwright</td>
+<td>Drive a real browser against a running app</td>
+</tr>
+<tr>
+<td><strong>Linting</strong></td>
+<td>ESLint 9 (flat config)</td>
+<td>Catch errors and enforce conventions</td>
+</tr>
+<tr>
+<td><strong>CI</strong></td>
+<td>GitHub Actions</td>
+<td>Run tests + build on every push/PR</td>
+</tr>
+<tr>
+<td><strong>Containers</strong></td>
+<td>Docker / Docker Compose</td>
+<td>Reproducible runtime and local services</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>In this repo:</strong> exact pinned versions are Next.js <code>16.2.6</code>, React <code>19.2.4</code>, Redux Toolkit <code>^2.12</code>,
+Tailwind <code>^4</code>, Vitest <code>^4.1.8</code>, Playwright <code>^1.60</code>, <code>better-sqlite3 ^12.10</code>. See the <a href="#13-appendix--dependencies--command-cheat-sheet">Appendix</a>.</p>
+</blockquote>
+<hr>
+<h2 id="3-prerequisites--environment-nodejs">3. Prerequisites &amp; Environment (Node.js)</h2>
+<p><strong>What &amp; why.</strong> Node.js runs everything outside the browser: the dev server, the production build, the test
+runner, and (for this stack) the database driver. Pin a single Node version so your machine and CI agree.</p>
+<p><strong>Install &amp; pin.</strong></p>
+<pre><code class="language-bash"># Install nvm (Node Version Manager), then:
+nvm install 22
+nvm use 22
+node -v        # v22.x.x
+</code></pre>
+<p>Pin the version for the whole team by committing an <code>.nvmrc</code>:</p>
+<pre><code class="language-bash">echo &quot;22&quot; &gt; .nvmrc      # `nvm use` now auto-selects Node 22 in this folder
+</code></pre>
+<p>Use <strong>npm</strong> as the package manager (ships with Node). The lockfile (<code>package-lock.json</code>) must be committed — CI
+installs from it with <code>npm ci</code> for byte-for-byte reproducible installs.</p>
+<blockquote>
+<p><strong>In this repo:</strong> CI runs on <strong>Node 22</strong> (<code>.github/workflows/ci.yml</code>). There is no <code>.nvmrc</code> yet — adding one is
+a recommended improvement so local environments match CI automatically.</p>
+</blockquote>
+<hr>
+<h2 id="4-project-scaffolding">4. Project Scaffolding</h2>
+<p><strong>What &amp; why.</strong> <code>create-next-app</code> generates a batteries-included Next.js project: TypeScript, the App Router,
+ESLint, and a Tailwind option, all pre-wired.</p>
+<pre><code class="language-bash">npx create-next-app@latest my-app --typescript --eslint --app --tailwind --src-dir=false --import-alias &quot;@/*&quot;
+cd my-app
+npm run dev        # http://localhost:3000
+</code></pre>
+<p><strong>Directory conventions.</strong> A predictable layout keeps a growing app navigable. A good convention:</p>
+<pre><code>my-app/
+├── app/                  # App Router: routes, layouts, pages, and API handlers
+│   ├── api/              #   server-side route handlers (the &quot;backend&quot;)
+│   ├── layout.tsx        #   root layout (wraps every page)
+│   ├── page.tsx          #   &quot;/&quot; route
+│   └── globals.css       #   global stylesheet (Tailwind entry)
+├── components/&lt;domain&gt;/  # React components grouped by feature (auth/, graph/, …)
+├── stores/               # Redux slices + store config
+├── lib/                  # framework-agnostic helpers (db, auth, utils)
+├── tests/                # unit / integration / e2e tests + specs
+├── next.config.ts
+├── tsconfig.json
+└── package.json
+</code></pre>
+<p><strong>TypeScript config.</strong> Two settings matter most: <code>strict</code> (turns on all type-safety checks) and a path alias so
+imports read <code>@/lib/db</code> instead of <code>../../../lib/db</code>.</p>
+<pre><code class="language-jsonc">// tsconfig.json (excerpt)
+{
+  &quot;compilerOptions&quot;: {
+    &quot;strict&quot;: true,
+    &quot;moduleResolution&quot;: &quot;bundler&quot;,
+    &quot;jsx&quot;: &quot;react-jsx&quot;,
+    &quot;paths&quot;: { &quot;@/*&quot;: [&quot;./*&quot;] }   // import { x } from '@/lib/x'
+  }
+}
+</code></pre>
+<blockquote>
+<p><strong>Convention used in this repo:</strong> pages under <code>app/&lt;route&gt;/page.tsx</code> are kept as <em>thin wrappers</em> — all real
+logic lives in <code>components/</code> and <code>stores/</code>. This keeps routing trivial and logic testable in isolation.</p>
+</blockquote>
+<hr>
+<h2 id="5-version-control--git--github">5. Version Control — Git &amp; GitHub</h2>
+<p><strong>What &amp; why.</strong> Git tracks history; GitHub hosts the remote and runs CI. Initialize early and commit in small,
+meaningful steps.</p>
+<pre><code class="language-bash">git init
+git add .
+git commit -m &quot;Initial commit from Create Next App&quot;
+
+# Create the remote (GitHub CLI) and push
+gh repo create my-app --private --source=. --remote=origin --push
+# …or manually:
+git remote add origin https://github.com/&lt;you&gt;/my-app.git
+git branch -M main
+git push -u origin main
+</code></pre>
+<p><strong>Commit conventions.</strong> Keep messages short and imperative, one logical change per commit
+("Add CI workflow", "Password reset", "Fix flaky tests"). This makes history readable and <code>git revert</code> surgical.</p>
+<p><strong><code>.gitignore</code> strategy.</strong> Ignore anything generated, secret, or local-only:</p>
+<pre><code class="language-gitignore">/node_modules          # dependencies (reinstalled from lockfile)
+/.next/                # Next.js build output
+/coverage              # test coverage reports
+/playwright-report     # E2E reports
+/test-results
+.env*                  # secrets — NEVER commit these
+*.pem
+.DS_Store
+data/                  # local database files
+*.tsbuildinfo
+next-env.d.ts
+</code></pre>
+<blockquote>
+<p><strong>A nuance worth copying:</strong> in this repo, <em>local working documents</em> are also gitignored — <code>*.feature</code>
+(Gherkin specs), <code>/docs/adr/</code> (decision records), and <code>CLAUDE.md</code> (assistant instructions). The reasoning:
+they're scaffolding for <em>how</em> the work is done, not part of the shipped product. <strong>Tests, by contrast, are
+committed</strong> — they are the executable contract for the code.</p>
+</blockquote>
+<p><strong>Branching.</strong> For solo work, short-lived feature branches merged into <code>main</code> via Pull Request is enough — the
+PR is what triggers CI (Section 10). Protect <code>main</code> so nothing merges with red tests.</p>
+<hr>
+<h2 id="6-frontend">6. Frontend</h2>
+<h3 id="61-routing--structure-nextjs-app-router">6.1 Routing &amp; structure (Next.js App Router)</h3>
+<p><strong>What &amp; why.</strong> The App Router maps the <code>app/</code> filesystem to URLs. No router config — the folder structure <em>is</em>
+the route table.</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>File / folder</th>
+<th>Becomes</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app/page.tsx</code></td>
+<td><code>/</code></td>
+<td>a page</td>
+</tr>
+<tr>
+<td><code>app/about/page.tsx</code></td>
+<td><code>/about</code></td>
+<td>nested page</td>
+</tr>
+<tr>
+<td><code>app/profile/[id]/page.tsx</code></td>
+<td><code>/profile/:id</code></td>
+<td>dynamic segment</td>
+</tr>
+<tr>
+<td><code>app/(marketing)/page.tsx</code></td>
+<td><code>/</code></td>
+<td><strong>route group</strong> — folder in <code>()</code> organizes files without affecting the URL</td>
+</tr>
+<tr>
+<td><code>app/layout.tsx</code></td>
+<td>—</td>
+<td>shared shell wrapping all child pages (nav, providers)</td>
+</tr>
+<tr>
+<td><code>app/api/things/route.ts</code></td>
+<td><code>/api/things</code></td>
+<td>server endpoint (see <a href="#7-backend">Backend</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Root layout</strong> is where you mount global providers (state, theme) and chrome (nav):</p>
+<pre><code class="language-tsx">// app/layout.tsx
+import { StoreProvider } from &quot;@/components/StoreProvider&quot;;
+import { ThemeProvider } from &quot;@/components/ThemeProvider&quot;;
+import { Nav } from &quot;@/components/Nav&quot;;
+import &quot;./globals.css&quot;;
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    &lt;html lang=&quot;en&quot;&gt;
+      &lt;body&gt;
+        &lt;StoreProvider&gt;
+          &lt;ThemeProvider&gt;
+            &lt;Nav /&gt;
+            {children}
+          &lt;/ThemeProvider&gt;
+        &lt;/StoreProvider&gt;
+      &lt;/body&gt;
+    &lt;/html&gt;
+  );
+}
+</code></pre>
+<p><strong>Server vs. client components.</strong> App Router components are <em>server components</em> by default (they render on the
+server and ship no JS). Add the <code>"use client"</code> directive at the top of any file that needs browser-only features:
+state, effects, event handlers, or access to the Redux store.</p>
+<pre><code class="language-tsx">&quot;use client&quot;;
+import { useState } from &quot;react&quot;;
+export function Counter() {
+  const [n, setN] = useState(0);
+  return &lt;button onClick={() =&gt; setN(n + 1)}&gt;{n}&lt;/button&gt;;
+}
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> routes include static pages (<code>/search</code>, <code>/graph</code>, <code>/import</code>), dynamic ones
+(<code>/profile/[key]</code>, <code>/shared/[token]</code>, <code>/admin/users/[userId]</code>), and a route group <code>(onboarding)</code> for the
+welcome flow. Interactive views are client components; pages stay thin.</p>
+</blockquote>
+<h3 id="62-react-fundamentals">6.2 React fundamentals</h3>
+<p><strong>What &amp; why.</strong> React renders UI as a function of state. The core hooks you'll use constantly:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Hook</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>useState</code></td>
+<td>local component state (form text, toggles, loading flags)</td>
+</tr>
+<tr>
+<td><code>useEffect</code></td>
+<td>side effects after render (fetch, subscriptions, syncing to storage)</td>
+</tr>
+<tr>
+<td><code>useRef</code></td>
+<td>a mutable value that survives renders without causing one (DOM nodes, guards)</td>
+</tr>
+<tr>
+<td><code>useCallback</code> / <code>useMemo</code></td>
+<td>stabilize functions/values passed to children or deps</td>
+</tr>
+<tr>
+<td><code>useLayoutEffect</code></td>
+<td>effects that must run <em>before</em> the browser paints (measuring/animating DOM)</td>
+</tr>
+</tbody>
+</table></div>
+<pre><code class="language-tsx">&quot;use client&quot;;
+import { useEffect, useState } from &quot;react&quot;;
+
+export function Clock() {
+  const [now, setNow] = useState(() =&gt; new Date());
+  useEffect(() =&gt; {
+    const id = setInterval(() =&gt; setNow(new Date()), 1000);
+    return () =&gt; clearInterval(id);   // cleanup on unmount
+  }, []);                              // [] = run once
+  return &lt;time&gt;{now.toLocaleTimeString()}&lt;/time&gt;;
+}
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> a <code>&lt;StoreProvider&gt;</code> uses a <code>useRef</code> "hydration guard" so persisted state loads from
+<code>localStorage</code> exactly once on mount, and a canvas-based graph view uses <code>useRef</code> + <code>useLayoutEffect</code> to drive
+a physics simulation against the <code>&lt;canvas&gt;</code> element.</p>
+</blockquote>
+<h3 id="63-styling-tailwind-css-v4">6.3 Styling (Tailwind CSS v4)</h3>
+<p><strong>What &amp; why.</strong> Tailwind is utility-first: you compose styles from small classes (<code>flex</code>, <code>p-4</code>, <code>text-gray-900</code>)
+directly in JSX, instead of writing and naming CSS. v4 is <strong>CSS-first</strong> — configuration lives in your stylesheet,
+not a big JS config file.</p>
+<p><strong>Setup (v4).</strong> Tailwind v4 plugs into PostCSS:</p>
+<pre><code class="language-js">// postcss.config.mjs
+const config = { plugins: { &quot;@tailwindcss/postcss&quot;: {} } };
+export default config;
+</code></pre>
+<pre><code class="language-css">/* app/globals.css — the entire Tailwind setup */
+@import &quot;tailwindcss&quot;;
+
+/* enable class-based dark mode: `dark:` variants apply under a .dark ancestor */
+@variant dark (&amp;:is(.dark, .dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist);   /* design tokens live here in v4 */
+}
+</code></pre>
+<p><strong>Usage</strong> — utilities in markup, with <code>dark:</code> variants for dark mode and responsive prefixes (<code>md:</code>) for
+breakpoints:</p>
+<pre><code class="language-tsx">&lt;div className=&quot;flex flex-col gap-4 p-6 bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 md:flex-row&quot;&gt;
+  …
+&lt;/div&gt;
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> dark mode is toggled by adding/removing a <code>.dark</code> class on the root (managed by a
+<code>ThemeProvider</code> that reads <code>matchMedia('(prefers-color-scheme: dark)')</code>). The <code>@variant dark</code> line above is the
+v4 way to bind <code>dark:</code> utilities to that class — a common gotcha when migrating from v3's <code>darkMode: 'class'</code>.</p>
+</blockquote>
+<h3 id="64-state-management-redux-toolkit">6.4 State management (Redux Toolkit)</h3>
+<p><strong>What &amp; why.</strong> When many components share and mutate the same data, prop-drilling and scattered <code>useState</code>
+become unmanageable. Redux Toolkit (RTK) centralizes shared state into a single store composed of <strong>slices</strong>.
+Each slice owns a piece of state plus the reducers that change it. Components read with <code>useSelector</code> and write
+with <code>useDispatch</code>.</p>
+<p><strong>Store</strong> = a map of slice reducers:</p>
+<pre><code class="language-ts">// stores/index.ts
+import { configureStore } from &quot;@reduxjs/toolkit&quot;;
+import { connectionSlice } from &quot;./connectionSlice&quot;;
+import { uiSlice } from &quot;./uiSlice&quot;;
+
+export const store = configureStore({
+  reducer: {
+    connections: connectionSlice.reducer,
+    ui: uiSlice.reducer,
+  },
+});
+
+export type RootState = ReturnType&lt;typeof store.getState&gt;;
+export type AppDispatch = typeof store.dispatch;
+</code></pre>
+<p><strong>Slice</strong> = state + reducers + actions, written with "mutating" syntax (RTK uses Immer to keep it immutable):</p>
+<pre><code class="language-ts">// stores/connectionSlice.ts
+import { createSlice, createSelector, type PayloadAction } from &quot;@reduxjs/toolkit&quot;;
+import type { RootState } from &quot;./index&quot;;
+
+interface Filters { company: string; favoritesOnly: boolean }
+interface State { items: Item[]; favorites: string[]; query: string; filters: Filters }
+
+const initialState: State = { items: [], favorites: [], query: &quot;&quot;, filters: { company: &quot;&quot;, favoritesOnly: false } };
+
+export const connectionSlice = createSlice({
+  name: &quot;connections&quot;,
+  initialState,
+  reducers: {
+    setItems(state, action: PayloadAction&lt;Item[]&gt;) { state.items = action.payload; },
+    toggleFavorite(state, action: PayloadAction&lt;string&gt;) {
+      const i = state.favorites.indexOf(action.payload);
+      if (i === -1) state.favorites.push(action.payload); else state.favorites.splice(i, 1);
+    },
+    setQuery(state, action: PayloadAction&lt;string&gt;) { state.query = action.payload; },
+  },
+});
+
+export const { setItems, toggleFavorite, setQuery } = connectionSlice.actions;
+
+// --- Selectors live at the bottom of the slice file ---
+const selectItems = (s: RootState) =&gt; s.connections.items;
+const selectQuery = (s: RootState) =&gt; s.connections.query;
+
+// createSelector MEMOIZES derived data: it only recomputes when its inputs change,
+// avoiding wasted filtering work on every render.
+export const selectFiltered = createSelector(
+  selectItems, selectQuery,
+  (items, query) =&gt; items.filter(i =&gt; i.name.toLowerCase().includes(query.toLowerCase())),
+);
+</code></pre>
+<p><strong>Using it in a component:</strong></p>
+<pre><code class="language-tsx">&quot;use client&quot;;
+import { useSelector, useDispatch } from &quot;react-redux&quot;;
+import { selectFiltered, setQuery } from &quot;@/stores/connectionSlice&quot;;
+
+export function Search() {
+  const results = useSelector(selectFiltered);
+  const dispatch = useDispatch();
+  return (
+    &lt;&gt;
+      &lt;input onChange={e =&gt; dispatch(setQuery(e.target.value))} /&gt;
+      &lt;ul&gt;{results.map(r =&gt; &lt;li key={r.id}&gt;{r.name}&lt;/li&gt;)}&lt;/ul&gt;
+    &lt;/&gt;
+  );
+}
+</code></pre>
+<p><strong>Persistence pattern.</strong> Subscribe to the store and mirror state to <code>localStorage</code>; load it back on startup.
+A subtle but important rule: <em>when the user is authenticated, the server is the source of truth</em>, so you persist
+only UI preferences locally — not data the server already owns.</p>
+<pre><code class="language-ts">const PERSIST_KEY = &quot;app_state&quot;;
+export function saveState(state: RootState) {
+  const payload: Record&lt;string, unknown&gt; = { ui: state.ui };          // always persist UI prefs
+  if (!isAuthenticated()) payload.connections = state.connections;    // persist data only for guests
+  localStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+}
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> the store has six slices (<code>connections</code>, <code>relationships</code>, <code>notes</code>, <code>followUps</code>, <code>auth</code>,
+<code>ui</code>). Selectors sit at the bottom of each slice file; <code>createSelector</code> powers the filtered-connections list.
+Persistence is gated on auth exactly as above, with a 1-second debounced sync to the server for logged-in users.</p>
+</blockquote>
+<h3 id="65-forms-react-hook-form--zod">6.5 Forms (React Hook Form + Zod)</h3>
+<p><strong>What &amp; why.</strong> React Hook Form (RHF) manages form state with minimal re-renders. Zod defines a schema once and
+gives you <em>both</em> runtime validation <em>and</em> a static TypeScript type. <code>@hookform/resolvers</code> glues them together.</p>
+<pre><code class="language-tsx">&quot;use client&quot;;
+import { useForm } from &quot;react-hook-form&quot;;
+import { zodResolver } from &quot;@hookform/resolvers/zod&quot;;
+import { z } from &quot;zod&quot;;
+
+const schema = z.object({
+  email: z.string().email(&quot;Enter a valid email&quot;),
+  password: z.string().min(8, &quot;At least 8 characters&quot;),
+});
+type FormValues = z.infer&lt;typeof schema&gt;;   // { email: string; password: string }
+
+export function LoginForm() {
+  const { register, handleSubmit, formState: { errors } } = useForm&lt;FormValues&gt;({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = async (values: FormValues) =&gt; {
+    await fetch(&quot;/api/auth/login&quot;, { method: &quot;POST&quot;, body: JSON.stringify(values) });
+  };
+
+  return (
+    &lt;form onSubmit={handleSubmit(onSubmit)}&gt;
+      &lt;input type=&quot;email&quot; {...register(&quot;email&quot;)} /&gt;
+      {errors.email &amp;&amp; &lt;p&gt;{errors.email.message}&lt;/p&gt;}
+      &lt;input type=&quot;password&quot; {...register(&quot;password&quot;)} /&gt;
+      {errors.password &amp;&amp; &lt;p&gt;{errors.password.message}&lt;/p&gt;}
+      &lt;button type=&quot;submit&quot;&gt;Sign in&lt;/button&gt;
+    &lt;/form&gt;
+  );
+}
+</code></pre>
+<p>The beauty: the <em>same</em> Zod schema can validate the request body on the server (Section 7.5), so client and server
+agree on shape by construction.</p>
+<blockquote>
+<p><strong>In this repo:</strong> all four auth screens (login, register, forgot-password, reset-password) use this
+RHF + Zod pattern.</p>
+</blockquote>
+<hr>
+<h2 id="7-backend">7. Backend</h2>
+<p>In this stack the "backend" is not a separate server — it's the set of server-side route handlers that Next.js
+runs for you under <code>app/api/</code>. They share the same repo, language, and types as the frontend.</p>
+<h3 id="71-api-route-handlers">7.1 API route handlers</h3>
+<p><strong>What &amp; why.</strong> A <code>route.ts</code> file inside <code>app/api/**</code> exports functions named after HTTP verbs (<code>GET</code>, <code>POST</code>,
+…). Next.js runs them on the server in response to requests to that path.</p>
+<pre><code class="language-ts">// app/api/things/route.ts
+import { NextRequest, NextResponse } from &quot;next/server&quot;;
+
+export async function GET() {
+  return NextResponse.json({ items: [] });
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  // …persist…
+  return NextResponse.json({ ok: true }, { status: 201 });
+}
+</code></pre>
+<p>A full handler typically does four things in order: <strong>authenticate → validate → do work in the DB → respond.</strong>
+Here is a real one (annotated):</p>
+<pre><code class="language-ts">// app/api/connections/route.ts
+export const dynamic = &quot;force-dynamic&quot;;        // never cache; always run on the server
+
+import { NextRequest, NextResponse } from &quot;next/server&quot;;
+import { requireAuth } from &quot;@/lib/requireAuth&quot;;
+import { getDb } from &quot;@/lib/db&quot;;
+import { z } from &quot;zod&quot;;
+
+const bodySchema = z.array(z.object({
+  name: z.string().max(200),
+  company: z.string().max(200),
+  personKey: z.string().max(300),
+})).max(20000);
+
+export async function POST(req: NextRequest) {
+  // 1) authenticate (throws a 401 Response if missing/invalid)
+  let payload;
+  try { payload = await requireAuth(req); } catch (res) { return res as Response; }
+
+  // 2) validate the untrusted body
+  const parsed = bodySchema.safeParse(await req.json().catch(() =&gt; null));
+  if (!parsed.success) return NextResponse.json({ error: &quot;Invalid input&quot; }, { status: 400 });
+
+  // 3) do the work inside a transaction (all-or-nothing)
+  const db = getDb();
+  db.transaction(() =&gt; {
+    db.prepare(&quot;DELETE FROM connections WHERE user_id = ?&quot;).run(payload.userId);
+    const insert = db.prepare(&quot;INSERT INTO connections (user_id, name, company, person_key) VALUES (?,?,?,?)&quot;);
+    for (const c of parsed.data) insert.run(payload.userId, c.name, c.company, c.personKey);
+  })();
+
+  // 4) respond
+  return NextResponse.json({ ok: true });
+}
+</code></pre>
+<h3 id="72-database-sqlite-via-better-sqlite3">7.2 Database (SQLite via better-sqlite3)</h3>
+<p><strong>What &amp; why.</strong> <code>better-sqlite3</code> is a synchronous, embedded SQLite driver — the entire database is a single file
+on disk, with no separate server to run. It's ideal for getting a real relational backend working immediately;
+you can migrate to Postgres later without changing your API shape.</p>
+<p><strong>Singleton + schema-on-init.</strong> Create the connection once per process and create tables if they don't exist:</p>
+<pre><code class="language-ts">// lib/db.ts
+import Database from &quot;better-sqlite3&quot;;
+import path from &quot;path&quot;;
+import fs from &quot;fs&quot;;
+
+const DB_PATH = path.join(process.cwd(), &quot;data&quot;, &quot;app.db&quot;);
+const globalForDb = globalThis as unknown as { db?: Database.Database };
+
+function createDb() {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  const db = new Database(DB_PATH);
+  db.pragma(&quot;journal_mode = WAL&quot;);   // allow concurrent reads while writing
+  db.pragma(&quot;foreign_keys = ON&quot;);    // enforce referential integrity
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      email         TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at    INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+    CREATE TABLE IF NOT EXISTS connections (
+      id      INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name    TEXT NOT NULL
+    );
+  `);
+  return db;
+}
+
+export function getDb() {
+  if (!globalForDb.db) globalForDb.db = createDb();   // reused across hot-reloads &amp; requests
+  return globalForDb.db;
+}
+</code></pre>
+<p><strong>Querying</strong> uses prepared statements (which also prevent SQL injection):</p>
+<pre><code class="language-ts">const db = getDb();
+const user = db.prepare(&quot;SELECT * FROM users WHERE email = ?&quot;).get(email);     // one row
+const rows = db.prepare(&quot;SELECT * FROM connections WHERE user_id = ?&quot;).all(id); // many rows
+db.prepare(&quot;INSERT INTO users (email, password_hash) VALUES (?, ?)&quot;).run(email, hash);
+</code></pre>
+<p>Key practices baked into the pattern: <strong>scope every row by <code>user_id</code></strong> (multi-tenant isolation),
+<strong>use <code>ON DELETE CASCADE</code></strong> so deleting a user cleans up their data, and <strong>run multi-statement writes in a
+<code>db.transaction(...)</code></strong> so they're atomic.</p>
+<blockquote>
+<p><strong>In this repo:</strong> the schema has 11 tables (users, connections, relationships, custom_types, notes, favorites,
+archives, follow_ups, shared_graphs, user_snapshots, password_reset_tokens), all <code>user_id</code>-scoped, with a
+guarded column migration (adds <code>is_admin</code> if missing) and optional admin seeding from <code>ADMIN_EMAIL</code> /
+<code>ADMIN_PASSWORD</code> env vars. The DB file lives in <code>data/</code> and is <strong>gitignored</strong>.</p>
+</blockquote>
+<h3 id="73-authentication-jwt--bcrypt">7.3 Authentication (JWT + bcrypt)</h3>
+<p><strong>What &amp; why.</strong> Two separate concerns:
+- <strong>Password storage</strong> — never store raw passwords. Hash them with <strong>bcrypt</strong>, a deliberately slow, salted
+  algorithm.
+- <strong>Sessions</strong> — issue a <strong>JWT</strong> (JSON Web Token) on login: a signed, tamper-evident token the client returns on
+  each request. The server verifies the signature instead of looking up a session in a database (stateless auth).</p>
+<pre><code class="language-ts">// hashing (registration / login)
+import bcrypt from &quot;bcryptjs&quot;;
+const hash = await bcrypt.hash(plainPassword, 12);     // store `hash`
+const ok   = await bcrypt.compare(plainPassword, hash); // true/false at login
+</code></pre>
+<pre><code class="language-ts">// lib/jwt.ts — sign on login, verify on each request
+import jwt from &quot;jsonwebtoken&quot;;
+
+export interface JWTPayload { userId: number; email: string; isAdmin: boolean }
+
+function getSecret(): string {
+  const s = process.env.JWT_SECRET;
+  if (!s) throw new Error(&quot;JWT_SECRET is not set&quot;);   // fail loud if misconfigured
+  return s;
+}
+
+export function signToken(p: JWTPayload): string {
+  return jwt.sign(p, getSecret(), { expiresIn: &quot;7d&quot; });
+}
+export function verifyToken(token: string): JWTPayload {
+  return jwt.verify(token, getSecret()) as JWTPayload;
+}
+</code></pre>
+<p><strong>Reading auth in a handler.</strong> A small helper accepts the token from either an <code>Authorization: Bearer …</code> header
+<em>or</em> an httpOnly cookie, and throws a ready-made <code>401</code> response if it's missing/invalid:</p>
+<pre><code class="language-ts">// lib/requireAuth.ts (abridged)
+export async function requireAuth(req: NextRequest): Promise&lt;JWTPayload&gt; {
+  const header = req.headers.get(&quot;authorization&quot;) ?? &quot;&quot;;
+  const token = header.startsWith(&quot;Bearer &quot;) ? header.slice(7) : req.cookies.get(&quot;nm_token&quot;)?.value;
+  if (!token) throw new Response(JSON.stringify({ error: &quot;Unauthorized&quot; }), { status: 401 });
+  try { return verifyToken(token); }
+  catch { throw new Response(JSON.stringify({ error: &quot;Invalid or expired token&quot; }), { status: 401 }); }
+}
+
+export async function requireAdmin(req: NextRequest) {
+  const payload = await requireAuth(req);
+  if (!payload.isAdmin) throw NextResponse.json({ error: &quot;Forbidden&quot; }, { status: 403 });
+  return payload;
+}
+</code></pre>
+<blockquote>
+<p><strong>Why two JWT libraries?</strong> <code>jsonwebtoken</code> is full-featured but depends on Node APIs, so it's used inside API
+routes (Node runtime). Next.js <strong>middleware</strong> runs on the lighter <em>Edge</em> runtime, which needs the
+Web-Crypto-based <code>jose</code> instead. In this repo <code>lib/jwt.ts</code> (jsonwebtoken) handles signing/verifying in routes,
+while <code>lib/jwt-edge.ts</code> (jose) only <em>decodes</em> the token in middleware for routing decisions.</p>
+</blockquote>
+<h3 id="74-route-protection-middleware">7.4 Route protection (middleware)</h3>
+<p><strong>What &amp; why.</strong> <code>middleware.ts</code> at the project root runs <em>before</em> a request reaches a page — perfect for
+redirecting unauthenticated users away from protected pages. <strong>Important:</strong> middleware is for <em>routing</em>, not
+security. It decodes the token to decide where to send the browser; the real cryptographic check still happens in
+every API route (Section 7.3).</p>
+<pre><code class="language-ts">// middleware.ts
+import { NextRequest, NextResponse } from &quot;next/server&quot;;
+import { decodeTokenPayload, COOKIE_NAME } from &quot;@/lib/jwt-edge&quot;;
+
+const PROTECTED = [&quot;/search&quot;, &quot;/graph&quot;, &quot;/profile&quot;];
+const AUTH_ONLY = [&quot;/login&quot;, &quot;/register&quot;];   // send logged-in users away from these
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const token = req.cookies.get(COOKIE_NAME)?.value ?? null;
+  const payload = token ? decodeTokenPayload(token) : null;  // decode only — not verify
+
+  if (PROTECTED.some(p =&gt; pathname.startsWith(p)) &amp;&amp; !payload) {
+    const url = req.nextUrl.clone(); url.pathname = &quot;/login&quot;; url.searchParams.set(&quot;from&quot;, pathname);
+    return NextResponse.redirect(url);
+  }
+  if (AUTH_ONLY.some(p =&gt; pathname.startsWith(p)) &amp;&amp; payload) {
+    const url = req.nextUrl.clone(); url.pathname = &quot;/search&quot;;
+    return NextResponse.redirect(url);
+  }
+  return NextResponse.next();
+}
+
+// Only run middleware on these paths (keeps it off static assets/API)
+export const config = {
+  matcher: [&quot;/search/:path*&quot;, &quot;/graph/:path*&quot;, &quot;/profile/:path*&quot;, &quot;/login&quot;, &quot;/register&quot;, &quot;/admin/:path*&quot;],
+};
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> middleware also gates <code>/admin</code> routes on an <code>isAdmin</code> claim and supports a non-sensitive
+client-set fallback cookie (<code>nm_authed</code>) for environments where the httpOnly cookie can't be stored.</p>
+</blockquote>
+<h3 id="75-input-validation-rate-limiting--transactional-email">7.5 Input validation, rate limiting &amp; transactional email</h3>
+<p><strong>Validation (Zod).</strong> Re-validate <em>every</em> request body on the server, even if the client already did — never
+trust the network. (<code>safeParse</code> returns success/failure instead of throwing.)</p>
+<pre><code class="language-ts">const schema = z.object({ email: z.string().email(), password: z.string().min(8) });
+const parsed = schema.safeParse(await req.json().catch(() =&gt; null));
+if (!parsed.success) return NextResponse.json({ error: &quot;Invalid input&quot; }, { status: 400 });
+</code></pre>
+<p><strong>Rate limiting.</strong> Throttle sensitive endpoints (login, forgot-password) by client IP to blunt brute-force and
+abuse. A simple in-memory limiter is enough for a single instance; use a shared store (e.g. Redis) when you scale
+horizontally.</p>
+<p><strong>Transactional email (Resend).</strong> For flows like password reset, generate a cryptographically random token,
+store only its <strong>hash</strong> in the DB with a short expiry, and email the <em>raw</em> token in a link. When the user clicks
+through, hash the incoming token and compare. This way a database leak never exposes usable reset links.</p>
+<pre><code class="language-ts">import { Resend } from &quot;resend&quot;;
+const resend = new Resend(process.env.RESEND_API_KEY);
+await resend.emails.send({
+  from: &quot;noreply@yourapp.com&quot;,
+  to: user.email,
+  subject: &quot;Reset your password&quot;,
+  html: `&lt;a href=&quot;https://yourapp.com/reset-password?token=${rawToken}&quot;&gt;Reset&lt;/a&gt;`,
+});
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> the password-reset flow stores a SHA-256 hash of the token with a 1-hour TTL, rate-limits the
+request endpoint by IP, and falls back to logging the link to the console in development if no <code>RESEND_API_KEY</code>
+is configured — so you can test without sending real mail.</p>
+</blockquote>
+<h3 id="76-security-headers">7.6 Security headers</h3>
+<p>Set defense-in-depth HTTP headers in <code>next.config.ts</code>. A Content-Security-Policy, <code>X-Frame-Options</code>,
+<code>Strict-Transport-Security</code>, etc., are cheap and meaningfully reduce attack surface.</p>
+<pre><code class="language-ts">// next.config.ts (excerpt)
+const nextConfig = {
+  async headers() {
+    if (process.env.NODE_ENV === &quot;development&quot;) return [];   // relax in dev
+    return [{
+      source: &quot;/(.*)&quot;,
+      headers: [
+        { key: &quot;X-Frame-Options&quot;, value: &quot;SAMEORIGIN&quot; },
+        { key: &quot;X-Content-Type-Options&quot;, value: &quot;nosniff&quot; },
+        { key: &quot;Referrer-Policy&quot;, value: &quot;strict-origin-when-cross-origin&quot; },
+        { key: &quot;Strict-Transport-Security&quot;, value: &quot;max-age=63072000; includeSubDomains; preload&quot; },
+        { key: &quot;Content-Security-Policy&quot;, value: &quot;default-src 'self'; script-src 'self' 'unsafe-inline'&quot; },
+      ],
+    }];
+  },
+};
+export default nextConfig;
+</code></pre>
+<hr>
+<h2 id="8-docker">8. Docker</h2>
+<blockquote>
+<p><strong>Teach + reality check.</strong> This section shows the <em>standard</em> way to containerize a Next.js app. The reference
+repo does <strong>not</strong> yet do this fully — see the callout at the end for what it actually has and how to finish it.</p>
+</blockquote>
+<p><strong>What &amp; why.</strong> Docker packages your app and its exact runtime into an image that runs identically on any
+machine. Docker Compose orchestrates multiple containers (e.g. app + database) for local development.</p>
+<p><strong>Multi-stage <code>Dockerfile</code></strong> for a Next.js production build. Multi-stage keeps the final image small: install &amp;
+build in heavier stages, copy only the runtime output into a slim final image. (Pair it with
+<code>output: "standalone"</code> in <code>next.config.ts</code> so Next emits a minimal self-contained server.)</p>
+<pre><code class="language-dockerfile"># 1) Install dependencies
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# 2) Build the app
+FROM node:22-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npm run build
+
+# 3) Minimal runtime image
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+EXPOSE 3000
+CMD [&quot;node&quot;, &quot;server.js&quot;]
+</code></pre>
+<p><strong><code>.dockerignore</code></strong> (mirror your <code>.gitignore</code>) keeps build context small and secrets out of the image:</p>
+<pre><code class="language-dockerignore">node_modules
+.next
+.git
+.env*
+coverage
+</code></pre>
+<p><strong><code>docker-compose.yml</code></strong> to run the app alongside a Postgres database locally:</p>
+<pre><code class="language-yaml">services:
+  app:
+    build: .
+    ports: [&quot;3000:3000&quot;]
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/app
+      JWT_SECRET: ${JWT_SECRET}      # injected from your shell / .env, never hard-coded
+    depends_on: [db]
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports: [&quot;5432:5432&quot;]
+    volumes: [&quot;postgres_data:/var/lib/postgresql/data&quot;]   # data survives container restarts
+
+volumes:
+  postgres_data:
+</code></pre>
+<pre><code class="language-bash">docker compose up --build      # start app + db
+docker compose down            # stop (add -v to also wipe the volume)
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> there is a <code>docker-compose.yml</code>, but it currently defines <strong>only a Postgres 16 service</strong> — and
+the app doesn't use it (the app runs on embedded SQLite, Section 7.2). There is <strong>no <code>Dockerfile</code></strong> and no
+<code>.dockerignore</code>. So Docker is <em>scaffolded but not wired in</em>. To complete it you would: (1) add the multi-stage
+<code>Dockerfile</code> and <code>.dockerignore</code> above, (2) add an <code>app</code> service to compose, and (3) either point the app at
+Postgres via a <code>DATABASE_URL</code> (swapping <code>better-sqlite3</code> for a Postgres client) or mount a volume for the
+SQLite file so data persists. The Postgres service is best read as a <em>future migration target</em>.</p>
+</blockquote>
+<hr>
+<h2 id="9-testing--the-tdd-workflow">9. Testing — the TDD Workflow</h2>
+<p>The discipline: <strong>describe behavior first, watch it fail, then make it pass.</strong></p>
+<ol>
+<li><strong>Spec (plain English).</strong> Write scenarios in Gherkin (<code>Given/When/Then</code>) describing the behavior and which
+   components/paths to cover. These are <em>working documents</em>, not shipped code.</li>
+<li><strong>Red.</strong> Write unit + integration tests. Run them; confirm they fail for the right reason.</li>
+<li><strong>Green.</strong> Write the minimum code to pass.</li>
+<li><strong>Refactor.</strong> Clean up with tests as a safety net.</li>
+<li><strong>E2E last.</strong> Once a feature is stable, add a Playwright golden-path test.</li>
+</ol>
+<pre><code class="language-gherkin"># tests/specs/auth.feature  (a local working document)
+Feature: Authentication
+  Scenario: Login with correct credentials
+    Given I have a registered account
+    When I submit my email and password on /login
+    Then I am redirected to /search
+    And my session token is stored
+
+## Integration Coverage
+- LoginForm: submits credentials, shows error on failure, redirects on success
+## E2E Coverage
+- register → log out → log back in → data still present
+</code></pre>
+<p>The three test layers map to three tools:</p>
+<h3 id="91-unit-testing-vitest">9.1 Unit testing (Vitest)</h3>
+<p><strong>What &amp; why.</strong> Vitest is a fast, Vite-native test runner with a Jest-compatible API. Unit tests cover the things
+with no UI or network: pure functions and <strong>Redux slice logic</strong> (dispatch an action to a real store, assert the
+new state). These are the cheapest, most numerous tests.</p>
+<p><strong>Config.</strong> One file configures both unit and integration runs. <code>jsdom</code> simulates a browser DOM; <code>globals: true</code>
+lets you use <code>describe/it/expect</code> without importing them; the path alias mirrors <code>tsconfig</code>.</p>
+<pre><code class="language-ts">// vitest.config.mts
+import { defineConfig } from &quot;vitest/config&quot;;
+import react from &quot;@vitejs/plugin-react&quot;;
+import path from &quot;path&quot;;
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: &quot;jsdom&quot;,
+    setupFiles: [&quot;./tests/setup.ts&quot;],
+    globals: true,
+    include: [&quot;tests/unit/**/*.test.ts&quot;, &quot;tests/unit/**/*.test.tsx&quot;, &quot;tests/integration/**/*.test.tsx&quot;],
+    coverage: { provider: &quot;v8&quot;, reporter: [&quot;text&quot;, &quot;json-summary&quot;], include: [&quot;lib/**&quot;, &quot;stores/**&quot;, &quot;components/**&quot;] },
+  },
+  resolve: { alias: { &quot;@&quot;: path.resolve(__dirname, &quot;.&quot;) } },
+});
+</code></pre>
+<pre><code class="language-ts">// tests/setup.ts — runs before each test file
+import &quot;@testing-library/jest-dom&quot;;   // adds matchers like .toBeInTheDocument()
+</code></pre>
+<p><strong>Testing a Redux slice</strong> — build a store from just that slice, dispatch, assert:</p>
+<pre><code class="language-ts">// tests/unit/connectionSlice.test.ts
+import { describe, it, expect } from &quot;vitest&quot;;
+import { configureStore } from &quot;@reduxjs/toolkit&quot;;
+import { connectionSlice, setQuery, selectFiltered } from &quot;@/stores/connectionSlice&quot;;
+
+const makeStore = () =&gt; configureStore({ reducer: { connections: connectionSlice.reducer } });
+
+describe(&quot;selectFiltered&quot;, () =&gt; {
+  it(&quot;filters by search query (case-insensitive)&quot;, () =&gt; {
+    const store = makeStore();
+    store.dispatch(connectionSlice.actions.setItems([{ id: &quot;1&quot;, name: &quot;Alex&quot; }, { id: &quot;2&quot;, name: &quot;Jordan&quot; }]));
+    store.dispatch(setQuery(&quot;ALEX&quot;));
+    const result = selectFiltered(store.getState());
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe(&quot;Alex&quot;);
+  });
+});
+</code></pre>
+<p>Run them:</p>
+<pre><code class="language-bash">npm test                  # vitest run  — single pass (used by CI)
+npm run test:watch        # vitest      — re-run on change while developing
+npm run test:coverage     # vitest run --coverage
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> ~20 unit files cover slices (<code>connectionSlice</code>, <code>relationshipSlice</code>), pure utilities
+(<code>jwt</code>, <code>data</code>, <code>export</code>, <code>rateLimit</code>), edge/middleware logic, and graph math. Coverage is reported via the v8
+provider; the suite was deliberately grown (a commit titled <em>"Coverage increased 40 → 65"</em>).</p>
+</blockquote>
+<h3 id="92-integration-testing-vitest--react-testing-library--msw">9.2 Integration testing (Vitest + React Testing Library + MSW)</h3>
+<p><strong>What &amp; why.</strong> Integration tests render a real component <strong>with its real store</strong> and assert on what a user would
+see and do. React Testing Library (RTL) encourages querying by accessible role/text (not implementation details).
+Anything the component talks to over the network gets <strong>mocked</strong> so the test is fast and deterministic.</p>
+<p><strong>Render with a Provider:</strong></p>
+<pre><code class="language-tsx">// tests/integration/LoginForm.test.tsx
+import { describe, it, expect, beforeEach, vi } from &quot;vitest&quot;;
+import { render, screen, fireEvent, waitFor } from &quot;@testing-library/react&quot;;
+import { Provider } from &quot;react-redux&quot;;
+import { configureStore } from &quot;@reduxjs/toolkit&quot;;
+import { authSlice } from &quot;@/stores/authSlice&quot;;
+import { uiSlice } from &quot;@/stores/uiSlice&quot;;
+import { LoginForm } from &quot;@/components/auth/LoginForm&quot;;
+
+// Components that call the Next.js router need it mocked under jsdom:
+vi.mock(&quot;next/navigation&quot;, () =&gt; ({ useSearchParams: () =&gt; ({ get: () =&gt; null }) }));
+
+const makeStore = () =&gt; configureStore({ reducer: { auth: authSlice.reducer, ui: uiSlice.reducer } });
+const renderForm = () =&gt; render(&lt;Provider store={makeStore()}&gt;&lt;LoginForm /&gt;&lt;/Provider&gt;);
+
+beforeEach(() =&gt; { vi.restoreAllMocks(); localStorage.clear(); });
+
+it(&quot;shows a server error on failed login&quot;, async () =&gt; {
+  // Mock the network call directly:
+  vi.spyOn(globalThis, &quot;fetch&quot;).mockResolvedValueOnce(
+    new Response(JSON.stringify({ error: &quot;Invalid email or password&quot; }), { status: 401 }),
+  );
+  renderForm();
+  fireEvent.change(screen.getByRole(&quot;textbox&quot;, { name: /email/i }), { target: { value: &quot;a@b.com&quot; } });
+  fireEvent.submit(screen.getByRole(&quot;button&quot;, { name: /sign in/i }));
+  await waitFor(() =&gt; expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument());
+});
+</code></pre>
+<p>There are <strong>two common ways to mock the network</strong> in integration tests — know both:</p>
+<p><strong>(a) <code>vi.spyOn(fetch)</code> — quick and local.</strong> Replace <code>fetch</code> per test with a canned <code>Response</code>. Minimal setup;
+ideal when only a handful of calls matter and you want the mock visible right next to the assertion. <em>This is what
+the reference repo uses.</em></p>
+<pre><code class="language-ts">vi.spyOn(globalThis, &quot;fetch&quot;).mockResolvedValueOnce(
+  new Response(JSON.stringify({ token: &quot;tok-abc&quot;, user: { id: 1 } }), { status: 200 }),
+);
+</code></pre>
+<p><strong>(b) MSW (Mock Service Worker) — realistic and centralized.</strong> MSW intercepts requests at the network layer using
+<em>request handlers</em>, so your component code calls <code>fetch</code> exactly as in production and doesn't know it's being
+mocked. Handlers are defined once and shared across all tests, which scales better as the number of endpoints
+grows and lets you model a fake API faithfully (status codes, latency, conditional responses).</p>
+<pre><code class="language-ts">// tests/mocks/handlers.ts
+import { http, HttpResponse } from &quot;msw&quot;;
+
+export const handlers = [
+  http.post(&quot;/api/auth/login&quot;, async ({ request }) =&gt; {
+    const { email } = (await request.json()) as { email: string };
+    if (email === &quot;bad@b.com&quot;) return HttpResponse.json({ error: &quot;Invalid email or password&quot; }, { status: 401 });
+    return HttpResponse.json({ token: &quot;tok-abc&quot;, user: { id: 1, email } });
+  }),
+];
+</code></pre>
+<pre><code class="language-ts">// tests/mocks/server.ts
+import { setupServer } from &quot;msw/node&quot;;
+import { handlers } from &quot;./handlers&quot;;
+export const server = setupServer(...handlers);
+</code></pre>
+<pre><code class="language-ts">// add to tests/setup.ts to turn MSW on for every test
+import { server } from &quot;./mocks/server&quot;;
+beforeAll(() =&gt; server.listen({ onUnhandledRequest: &quot;error&quot; }));
+afterEach(() =&gt; server.resetHandlers());   // undo per-test overrides
+afterAll(() =&gt; server.close());
+</code></pre>
+<p>Individual tests can still override a handler for one case (<code>server.use(http.post(...))</code>), then <code>resetHandlers</code>
+restores the defaults.</p>
+<blockquote>
+<p><strong>In this repo:</strong> MSW <strong>is installed</strong> (<code>msw ^2.14.6</code>) but <strong>not currently wired in</strong> — every integration test
+mocks the network with <code>vi.spyOn(globalThis, 'fetch')</code> as in (a). Both approaches are valid; the project chose
+the lighter one. If/when the number of endpoints or the need for shared fixtures grows, migrating to the MSW
+setup in (b) is the natural next step — the <code>tests/mocks/</code> folder is already the place for it.</p>
+<p><strong>jsdom gotchas:</strong> jsdom implements <em>most</em> of the DOM but not everything. Browser-only APIs your components
+touch — <code>window.matchMedia</code>, <code>ResizeObserver</code>, <code>&lt;canvas&gt;</code> <code>getContext</code>, <code>window.location</code> assignment — must be
+stubbed in setup or per-test (e.g. <code>vi.fn()</code>), or the test will throw.</p>
+</blockquote>
+<h3 id="93-end-to-end-testing-playwright">9.3 End-to-end testing (Playwright)</h3>
+<p><strong>What &amp; why.</strong> E2E tests are the top of the pyramid: they launch a <strong>real browser</strong>, start (or reuse) the
+<strong>real app</strong>, and click through it like a user — exercising frontend, backend, and database together. They're
+slow and broad, so you keep a <em>few</em> covering critical "golden paths" rather than every edge case.</p>
+<p><strong>Config.</strong> Playwright can start your dev server for you (<code>webServer</code>) and wait until it's reachable before
+running:</p>
+<pre><code class="language-ts">// playwright.config.ts
+import { defineConfig, devices } from &quot;@playwright/test&quot;;
+
+export default defineConfig({
+  testDir: &quot;./tests/e2e&quot;,
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,          // fail CI if a stray `test.only` is committed
+  retries: process.env.CI ? 2 : 0,        // tolerate flakiness only in CI
+  reporter: &quot;html&quot;,
+  use: { baseURL: &quot;http://localhost:3000&quot;, trace: &quot;on-first-retry&quot; },  // record a trace to debug failures
+  projects: [{ name: &quot;chromium&quot;, use: { ...devices[&quot;Desktop Chrome&quot;] } }],
+  webServer: {
+    command: &quot;npm run dev&quot;,
+    url: &quot;http://localhost:3000&quot;,
+    reuseExistingServer: !process.env.CI,  // locally reuse a running server; in CI start fresh
+  },
+});
+</code></pre>
+<p><strong>A golden-path spec</strong> — note how you can run <em>two browser contexts</em> to simulate two different users/sessions:</p>
+<pre><code class="language-ts">// tests/e2e/share.spec.ts
+import { test, expect } from &quot;@playwright/test&quot;;
+
+test(&quot;owner shares a link; a visitor sees a read-only view&quot;, async ({ page, browser }) =&gt; {
+  // Owner logs in and creates a share link
+  await page.goto(&quot;/login&quot;);
+  await page.fill('input[type=&quot;email&quot;]', &quot;owner@example.com&quot;);
+  await page.fill('input[type=&quot;password&quot;]', &quot;password123&quot;);
+  await page.click(&quot;button:has-text('Sign in')&quot;);
+  await page.click(&quot;button:has-text('Create share link')&quot;);
+  const shareUrl = await page.locator(&quot;[data-share-url]&quot;).inputValue();
+
+  // A separate, logged-out context opens the link
+  const visitor = await browser.newContext();
+  const visitorPage = await visitor.newPage();
+  await visitorPage.goto(shareUrl);
+  await expect(visitorPage.getByText(/read-only/i)).toBeVisible();
+  await visitor.close();
+});
+</code></pre>
+<pre><code class="language-bash">npm run test:e2e                 # playwright test (headless)
+npx playwright test --ui         # interactive UI mode for debugging
+npx playwright install           # one-time: download browser binaries
+</code></pre>
+<blockquote>
+<p><strong>In this repo:</strong> Playwright runs <strong>Chromium only</strong>, with one golden-path spec (<code>graph-share.spec.ts</code>) that
+tests the share flow across an owner context and a visitor context. E2E runs locally via <code>npm run test:e2e</code>
+(it is intentionally <em>not</em> part of CI — see the next section).</p>
+</blockquote>
+<hr>
+<h2 id="10-cicd--github-actions">10. CI/CD — GitHub Actions</h2>
+<p><strong>What &amp; why.</strong> Continuous Integration runs your tests and build automatically on every push and pull request, so
+broken code is caught before it merges. GitHub Actions reads workflow YAML from <code>.github/workflows/</code>.</p>
+<p><strong>A two-job pipeline: test, then build.</strong> The <code>build</code> job declares <code>needs: test</code>, so it only runs if tests pass —
+fail fast and cheap.</p>
+<pre><code class="language-yaml"># .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm                 # cache ~/.npm between runs for speed
+      - run: npm ci                  # clean, lockfile-exact install
+      - run: npm test                # vitest run (unit + integration)
+        env:
+          JWT_SECRET: ci-test-secret-not-used-in-unit-tests   # placeholder, not a real secret
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test                      # only build if tests pass
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build           # next build — also type-checks the whole app
+        env:
+          JWT_SECRET: ci-build-secret-not-real
+          NEXT_PUBLIC_API_BASE: http://localhost:3000
+</code></pre>
+<p><strong>Secrets — the right way.</strong> Never commit real credentials. Inject them at runtime:
+- In CI, store real values as <strong>GitHub repository secrets</strong> and reference them as <code>${{ secrets.JWT_SECRET }}</code>.
+- Locally, keep them in a <strong>gitignored <code>.env</code></strong> file.
+- The placeholder strings above are intentionally fake — they exist only so the build/test process has <em>some</em>
+  value present, not because they're sensitive.</p>
+<blockquote>
+<p><strong>In this repo:</strong> the workflow is exactly the two-job test→build pipeline above, on Node 22, triggered by push
+and PR to <code>main</code>. There is <strong>no deploy job</strong> and <strong>no E2E in CI</strong> (Playwright runs locally). Natural extensions:
+add a <code>test:e2e</code> job (with <code>npx playwright install --with-deps</code>), upload the coverage/HTML reports as
+artifacts, and add a deploy job (e.g. to Vercel) gated on <code>needs: [test, build]</code>.</p>
+<p>⚠️ <strong>Workplace note (per CITY Furniture's AI Policy).</strong> If you apply these CD/deployment practices inside CITY's
+environment, remember that <strong>production deployments, new system integrations, and installing non-approved APIs,
+plug-ins, connectors, or standing up new GenAI software require approval via a Tech Request Form.</strong> This guide
+is for a personal side project; adapt accordingly at work, and route policy/exception questions to the CIO or
+VP of HR.</p>
+</blockquote>
+<hr>
+<h2 id="11-architecture-decision-records-adrs">11. Architecture Decision Records (ADRs)</h2>
+<p><strong>What &amp; why.</strong> An ADR is a short markdown file recording <em>one</em> significant technical decision and its rationale,
+so a future contributor (or future you) understands <em>why</em> the code is the way it is. They're numbered
+sequentially and immutable: when a decision changes, you write a new ADR and mark the old one <code>Superseded</code>.</p>
+<pre><code class="language-markdown"># ADR-007: Use SQLite (better-sqlite3) for persistence
+
+## Status
+Accepted
+
+## Context
+We need a real relational store but want zero infrastructure for local dev and early deployment.
+
+## Decision
+Use better-sqlite3 with a schema-on-init module and a singleton connection. Keep the API shape
+storage-agnostic so a later move to Postgres is mechanical.
+
+## Consequences
++ No DB server to run; the database is a single file.
++ Synchronous queries simplify handler code.
+− Single-writer; horizontal scaling will require migrating to Postgres (tracked as a future ADR).
+</code></pre>
+<p><strong>Write or update an ADR when:</strong> adding a dependency, changing the state shape (new slice/major selector),
+changing a routing convention, or making any choice that would surprise a newcomer.</p>
+<blockquote>
+<p><strong>In this repo:</strong> ADRs live in <code>docs/adr/ADR-NNN-&lt;slug&gt;.md</code> and are <strong>gitignored</strong> as local working documents
+(same rationale as the Gherkin specs).</p>
+</blockquote>
+<hr>
+<h2 id="12-recreation-checklist">12. Recreation Checklist</h2>
+<p>A condensed, ordered path from zero to a CI-validated full-stack app:</p>
+<pre><code class="language-bash"># 1. Environment
+nvm install 22 &amp;&amp; nvm use 22 &amp;&amp; echo &quot;22&quot; &gt; .nvmrc
+
+# 2. Scaffold
+npx create-next-app@latest my-app --typescript --eslint --app --tailwind --import-alias &quot;@/*&quot;
+cd my-app
+
+# 3. Version control
+git init &amp;&amp; git add . &amp;&amp; git commit -m &quot;Initial commit&quot;
+gh repo create my-app --private --source=. --remote=origin --push
+
+# 4. State &amp; forms
+npm i @reduxjs/toolkit react-redux react-hook-form @hookform/resolvers zod
+
+# 5. Backend (DB + auth + email)
+npm i better-sqlite3 bcryptjs jsonwebtoken jose resend
+npm i -D @types/better-sqlite3 @types/bcryptjs @types/jsonwebtoken
+
+# 6. Testing toolchain
+npm i -D vitest @vitejs/plugin-react jsdom \
+        @testing-library/react @testing-library/dom @testing-library/jest-dom @testing-library/user-event \
+        @vitest/coverage-v8 msw @playwright/test
+npx playwright install
+</code></pre>
+<p>Then, per feature, follow the loop:</p>
+<ol>
+<li>Write the Gherkin spec (<code>tests/specs/&lt;feature&gt;.feature</code>).</li>
+<li>Write failing unit + integration tests (<code>tests/unit</code>, <code>tests/integration</code>). Run <code>npm test</code> → <strong>Red</strong>.</li>
+<li>Implement the slice / component / API route until <strong>Green</strong>; refactor.</li>
+<li>Once stable, add a Playwright golden-path spec (<code>tests/e2e</code>).</li>
+<li>Commit, push, open a PR → GitHub Actions runs test + build.</li>
+<li>Record any notable decision as an ADR.</li>
+</ol>
+<hr>
+<h2 id="13-appendix--dependencies--command-cheat-sheet">13. Appendix — Dependencies &amp; Command Cheat-Sheet</h2>
+<h3 id="runtime-dependencies">Runtime dependencies</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>next</code></td>
+<td><code>16.2.6</code></td>
+<td>Framework (routing, SSR, API, bundling)</td>
+</tr>
+<tr>
+<td><code>react</code>, <code>react-dom</code></td>
+<td><code>19.2.4</code></td>
+<td>UI library</td>
+</tr>
+<tr>
+<td><code>@reduxjs/toolkit</code></td>
+<td><code>^2.12.0</code></td>
+<td>Client state (slices, store, selectors)</td>
+</tr>
+<tr>
+<td><code>react-redux</code></td>
+<td><code>^9.3.0</code></td>
+<td>React bindings for Redux</td>
+</tr>
+<tr>
+<td><code>react-hook-form</code></td>
+<td><code>^7.77.0</code></td>
+<td>Form state management</td>
+</tr>
+<tr>
+<td><code>@hookform/resolvers</code></td>
+<td><code>^5.4.0</code></td>
+<td>Bridges RHF with Zod</td>
+</tr>
+<tr>
+<td><code>zod</code></td>
+<td><code>^4.4.3</code></td>
+<td>Schema validation + inferred types</td>
+</tr>
+<tr>
+<td><code>better-sqlite3</code></td>
+<td><code>^12.10.0</code></td>
+<td>Embedded SQLite database driver</td>
+</tr>
+<tr>
+<td><code>bcryptjs</code></td>
+<td><code>^3.0.3</code></td>
+<td>Password hashing</td>
+</tr>
+<tr>
+<td><code>jsonwebtoken</code></td>
+<td><code>^9.0.3</code></td>
+<td>JWT sign/verify (Node runtime)</td>
+</tr>
+<tr>
+<td><code>jose</code></td>
+<td><code>^6.2.3</code></td>
+<td>JWT decode (Edge runtime / middleware)</td>
+</tr>
+<tr>
+<td><code>resend</code></td>
+<td><code>^6.12.4</code></td>
+<td>Transactional email</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="dev--tooling-dependencies">Dev / tooling dependencies</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>typescript</code></td>
+<td><code>^5</code></td>
+<td>Static typing</td>
+</tr>
+<tr>
+<td><code>tailwindcss</code>, <code>@tailwindcss/postcss</code></td>
+<td><code>^4</code></td>
+<td>Utility-first CSS (v4, PostCSS plugin)</td>
+</tr>
+<tr>
+<td><code>eslint</code>, <code>eslint-config-next</code></td>
+<td><code>^9</code>, <code>16.2.6</code></td>
+<td>Linting (flat config)</td>
+</tr>
+<tr>
+<td><code>vitest</code></td>
+<td><code>^4.1.8</code></td>
+<td>Test runner</td>
+</tr>
+<tr>
+<td><code>@vitejs/plugin-react</code></td>
+<td><code>^6.0.2</code></td>
+<td>React support in Vitest</td>
+</tr>
+<tr>
+<td><code>@vitest/coverage-v8</code></td>
+<td><code>^4.1.8</code></td>
+<td>Coverage reporting</td>
+</tr>
+<tr>
+<td><code>jsdom</code></td>
+<td><code>^29.1.1</code></td>
+<td>DOM simulation for tests</td>
+</tr>
+<tr>
+<td><code>@testing-library/react</code></td>
+<td><code>^16.3.2</code></td>
+<td>Render/query components</td>
+</tr>
+<tr>
+<td><code>@testing-library/dom</code></td>
+<td><code>^10.4.1</code></td>
+<td>DOM queries (peer)</td>
+</tr>
+<tr>
+<td><code>@testing-library/jest-dom</code></td>
+<td><code>^6.9.1</code></td>
+<td>Extra DOM matchers</td>
+</tr>
+<tr>
+<td><code>@testing-library/user-event</code></td>
+<td><code>^14.6.1</code></td>
+<td>Realistic user interactions</td>
+</tr>
+<tr>
+<td><code>msw</code></td>
+<td><code>^2.14.6</code></td>
+<td>Network mocking (handler-based)</td>
+</tr>
+<tr>
+<td><code>@playwright/test</code></td>
+<td><code>^1.60.0</code></td>
+<td>End-to-end browser testing</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="command-cheat-sheet">Command cheat-sheet</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm run dev</code></td>
+<td>Start the dev server at <code>http://localhost:3000</code> (use <code>-p 3002</code> if the port is taken)</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>Production build <strong>+ full TypeScript type-check</strong></td>
+</tr>
+<tr>
+<td><code>npm start</code></td>
+<td>Run the production build</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>Run ESLint</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>Run unit + integration tests once (what CI runs)</td>
+</tr>
+<tr>
+<td><code>npm run test:watch</code></td>
+<td>Re-run tests on file change</td>
+</tr>
+<tr>
+<td><code>npm run test:coverage</code></td>
+<td>Tests with a coverage report</td>
+</tr>
+<tr>
+<td><code>npm run test:e2e</code></td>
+<td>Run Playwright E2E tests</td>
+</tr>
+<tr>
+<td><code>docker compose up --build</code></td>
+<td>Build &amp; run app + services in containers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="environment-variables">Environment variables</h3>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Used by</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>JWT_SECRET</code></td>
+<td>auth (sign/verify tokens)</td>
+<td><strong>required</strong>; keep in <code>.env</code> / GitHub Secrets, never commit</td>
+</tr>
+<tr>
+<td><code>RESEND_API_KEY</code></td>
+<td>email</td>
+<td>optional; falls back to console logging in dev</td>
+</tr>
+<tr>
+<td><code>ADMIN_EMAIL</code>, <code>ADMIN_PASSWORD</code></td>
+<td>DB seeding</td>
+<td>optional; seed an admin account on first run</td>
+</tr>
+<tr>
+<td><code>NEXT_PUBLIC_API_BASE</code></td>
+<td>client</td>
+<td>the <code>NEXT_PUBLIC_</code> prefix exposes a var to the browser</td>
+</tr>
+</tbody>
+</table></div>
+<hr>
+<p><em>End of playbook. This document describes a general, reusable stack and workflow; the "In this repo" callouts map
+each idea to one real implementation so you can see theory and practice side by side.</em></p>
+</main>
+
+<footer>
+  &copy; 2026 Chase Sweers &middot; Full-Stack Web App Playbook
+</footer>
+
+</body>
+</html>
