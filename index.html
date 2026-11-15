@@ -278,9 +278,7 @@
     margin: -4px 0 14px;
   }
   .card .status.live { color: var(--purple-bright); }
-  .card .status.private { color: var(--text-dim); }
   .card .status span { color: var(--text-dim); }
-  div.card:hover { transform: none; }
   .tags { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px; }
   .tag {
     font-family: 'JetBrains Mono', monospace;
@@ -412,13 +410,16 @@
     <img src="images/boatboss-preview.png" alt="BoatBoss Loans home page" loading="lazy">
   </div>
 </a>
-      <div class="card reveal">
+      <a class="card reveal" href="https://ea-tool-demo.vercel.app" target="_blank" rel="noopener">
   <div class="num">003</div>
   <h3>EA Tool</h3>
-  <div class="status private">Private internship project · no public demo</div>
+  <div class="status live">Live demo ↗ <span>· fictional sample data</span></div>
   <p>An enterprise architecture platform built during my tech modernization internship. It replaces an Excel-based modernization tracker with a graph-backed app that holds the company's application inventory, scores every application on TIME/PAID, maps dependencies and risk concentration, and supports scenario planning for portfolio rationalization. Role-based access strips financial fields for business users, and a projection layer caches read models for fast dashboards.</p>
   <div class="tags"><span class="tag">Python</span><span class="tag">FastAPI</span><span class="tag">Neo4j</span><span class="tag">React</span><span class="tag">Redis</span></div>
-</div>
+  <div class="card-preview">
+    <img src="images/ea-tool-preview.png" alt="EA Tool enterprise overview dashboard" loading="lazy">
+  </div>
+</a>
     </div>
   </section>
 
